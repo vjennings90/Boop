@@ -19,6 +19,7 @@ Boop::Boop(){
 }
 
 void Boop::restart(){
+    turn_type = 0;
     p1c = 0;
     p2c = 0;
     p1k = 8;
@@ -33,8 +34,25 @@ void Boop::restart(){
 }
 
 void Boop::make_move(const string& move){
-    char answer;
-    string begin_row;
+    //hidden string
+    if(move == "OVER"){
+        game::make_move(move);
+        return;
+    }
+  //KEY   0 = new_piece, 1 = removing one, 3 = removing 3
+    if(turn_type == 0){
+        make_move_1(move);
+    }
+    else if(turn_type == 3){
+        make_move_2(move);
+    }
+    else if(turn_type == 1){
+        make_move_3(move);
+    }
+}
+
+void Boop::make_move_1(const string& move){
+    //get row and column number and piece type, put new piece on board, boop
     //Interpreting Move
     //c or k part
     char animal = toupper(move.at(0));
@@ -73,29 +91,157 @@ void Boop::make_move(const string& move){
     booping(move);
 
 
-    //if there are enough kittens or cats on board to have kittens in a row
-    if((p1k <= 6 && p1c >= 1) || (p2k <= 6 && p2c >= 1) || (p1k <= 5)|| (p2k <= 5)){
-        display_status();
-        cout << "Are there three kittens in a row?(y/n): " << endl;
-        cin >> answer;
-        if(cin.peek() == '\n') cin.ignore();
-
-        if(answer == 'n' || answer == 'N'){//no cats to create
-            game::make_move(move);// increments it
-            return;
-        }else{
-            cout << "Where does row begin? and in what diretion?" << endl;
-            cout << "Input format: direction(v,h,d), column, row...ex: d1z(diagonal, column 1, row z)" << endl;
-            cin >> begin_row;
-            if(cin.peek() == '\n') cin.ignore();
-            make_cat(begin_row);
-        }
+    //IF STATEMENTS:
+    if(kitten_row()){//check there are 3 kittens
+        turn_type = 3;//removing 3
+        return;
+    }else if((p1c == 0 && p1k == 0)|| (p2c == 0 && p2k == 0)){//check for all 8 pieces played
+        turn_type = 1;//removing 1
+        return;
     }
+    //cout << "changing turns\n";
+    game::make_move(move);
+    return;
 
-
-    game::make_move(move);// increments it
 }
 
+void Boop::make_move_2(const string& move){
+    //remove them and add 2 cats to bank
+    make_cat(move);
+    turn_type = 0;
+    game::make_move(move);
+    return;
+}
+
+void Boop::make_move_3(const string& move){
+    // column part
+    int column = move.at(1) - '1'; 
+    //row part
+    int row = toupper(move.at(2)) - 'U';
+
+    //removing piece
+    board[row][column].set_type(0);
+    
+    //adding one cat to bank
+    if(next_mover() == HUMAN){
+        p1c++;
+    } else if(next_mover() == COMPUTER){
+        p2c++;
+    }
+
+    //next turn is new piece
+    turn_type = 0;
+    game::make_move(move);
+}
+
+bool Boop::kitten_row(){
+    //checking each row individually to see if there are 3 cats in a row
+    for(int row = 0; row < 6; row++){
+        for(int column = 0; column < 6; column++){
+            int space_type = board[row][column].get_type();
+            if(space_type == 1 || space_type == 3){// Human
+                //top middle 
+                if(row - 1 >= 0 && (board[row - 1][column].get_type() == 1|| board[row - 1][column].get_type() == 3)){
+                    if(row - 2 >= 0 && (board[row - 2][column].get_type() == 1 || board[row - 2][column].get_type() == 3) ){
+                        return true;
+                    }
+                }
+                //top right corner
+                if(row - 1 >= 0 && column + 1 < 6 && (board[row - 1][column + 1].get_type() == 1 || board[row - 1][column + 1].get_type() == 3)){
+                    if(row - 2 >= 0 && column + 2 < 6 && (board[row - 2][column + 2].get_type() == 1 || board[row - 2][column + 2].get_type() == 3)){
+                        return true;
+                    }
+                }
+                //directly right
+                if(column + 1 < 6 && (board[row][column + 1].get_type() == 1 || board[row][column + 1].get_type() == 3) ){
+                    if(column + 2 < 6 && (board[row][column + 2].get_type() == 1 || board[row][column + 2].get_type() == 3)){
+                        return true;
+                    }
+                }
+                //bottom right corner
+                if(row + 1 < 6 && column + 1 < 6 && (board[row + 1][column + 1].get_type() == 1 || board[row + 1][column + 1].get_type() == 3)){
+                    if(row + 2 < 6 && column + 2 < 6 && (board[row + 2][column + 2].get_type() == 1 || board[row + 2][column + 2].get_type() == 3)){
+                        return true;
+                    } 
+                }
+                //bottom middle
+                if(row + 1 < 6 && (board[row + 1][column].get_type() == 1 || board[row + 1][column].get_type() == 3)){
+                    if(row + 2 < 6 && (board[row + 2][column].get_type() == 1 || board[row + 2][column].get_type() == 3)){
+                        return true;
+                    }
+                }
+                //bottom left corner
+                if(row + 1 < 6 && column - 1 >= 0 && (board[row + 1][column - 1].get_type() == 1 || board[row + 1][column - 1].get_type() == 3)){
+                    if(row + 2 < 6 && column - 2 >= 0 && (board[row + 2][column - 2].get_type() == 1 || board[row + 2][column - 2].get_type() == 3)){
+                        return true;
+                    }
+                }
+                //directly left
+                if(column - 1 >= 0 && (board[row][column - 1].get_type() == 1 || board[row][column - 1].get_type() == 3) ){
+                    if(column - 2 >= 0 && (board[row][column - 2].get_type() == 1 || board[row][column - 2].get_type() == 3)){
+                        return true;
+                    }
+                }
+                //top left corner
+                if(row - 1 >= 0 && column - 1 >= 0 && (board[row - 1][column - 1].get_type() == 1 || board[row - 1][column - 1].get_type() == 3)){
+                    if(row - 2 >= 0 && column - 2 >= 0 && (board[row - 2][column - 2].get_type() == 1 || board[row - 2][column - 2].get_type() == 3)){
+                        return true;
+                    }
+                }
+            }else if(space_type == 2 || space_type == 4){//Computer
+                 //top middle 
+                if(row - 1 >= 0 && (board[row - 1][column].get_type() == 2 || board[row - 1][column].get_type() == 4)){
+                    if(row - 2 >= 0 && (board[row - 2][column].get_type() == 2 || board[row - 2][column].get_type() == 4)){
+                        return true;
+                    }
+                }
+                //top right corner
+                if(row - 1 >= 0 && column + 1 < 6 && (board[row - 1][column + 1].get_type() == 2 || board[row - 1][column + 1].get_type() == 4)){
+                    if(row - 2 >= 0 && column + 2 < 6 && (board[row - 2][column + 2].get_type() == 2 || board[row - 2][column + 2].get_type() == 4)){
+                        return true;
+                    }
+                }
+                //directly right
+                if(column + 1 < 6 && (board[row][column + 1].get_type() == 2 || board[row][column + 1].get_type() == 4) ){
+                    if(column + 2 < 6 && (board[row][column + 2].get_type() == 2 || board[row][column + 2].get_type() == 4)){
+                        return true;
+                    }
+                }
+                //bottom right corner
+                if(row + 1 < 6 && column + 1 < 6 && (board[row + 1][column + 1].get_type() == 2 || board[row + 1][column + 1].get_type() == 4)){
+                    if(row + 2 < 6 && column + 2 < 6 && (board[row + 2][column + 2].get_type() == 2 || board[row + 2][column + 2].get_type() == 4)){
+                        return true;
+                    } 
+                }
+                //bottom middle
+                if(row + 1 < 6 && (board[row + 1][column].get_type() == 2 || board[row + 1][column].get_type() == 4)){
+                    if(row + 2 < 6 && (board[row + 2][column].get_type() == 2 || board[row + 2][column].get_type() == 4)){
+                        return true;
+                    }
+                }
+                //bottom left corner
+                if(row + 1 < 6 && column - 1 >= 0 && (board[row + 1][column - 1].get_type() == 2 || board[row + 1][column - 1].get_type() == 4)){
+                    if(row + 2 < 6 && column - 2 >= 0 && (board[row + 2][column - 2].get_type() == 2 || board[row + 2][column - 2].get_type() == 4)){
+                        return true;
+                    }
+                }
+                //directly left
+                if(column - 1 >= 0 && (board[row][column - 1].get_type() == 2 || board[row][column - 1].get_type() == 4) ){
+                    if(column - 2 >= 0 && (board[row][column - 2].get_type() == 2 || board[row][column - 2].get_type() == 4)){
+                        return true;
+                    }
+                }
+                //top left corner
+                if(row - 1 >= 0 && column - 1 >= 0 && (board[row - 1][column - 1].get_type() == 2 || board[row - 1][column - 1].get_type() == 4)){
+                    if(row - 2 >= 0 && column - 2 >= 0 && (board[row - 2][column - 2].get_type() == 2 || board[row - 2][column - 2].get_type() == 4)){
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
 
 void Boop::return_to_bank(Space& piece){
     if(piece.get_type() == 1){
@@ -396,10 +542,8 @@ void Boop::booping(const string& move){
 
 void Boop::make_cat(const string& move){
     //Interpreting Move
-    //c or k part
     char direction = toupper(move.at(0));
     // column part
-    //char column = move.at(1);
     int column = move.at(1) - '1'; 
     //row part
     int row = toupper(move.at(2)) - 'U';
@@ -511,26 +655,106 @@ void Boop::make_cat(const string& move){
     }
 }
 
-
-
+string Boop::get_user_move() const{
+    string answer;
+    string begin_row;
+	if(turn_type == 3){
+        cout << "Where does row begin? and in what diretion?" << endl;
+        cout << "Input format: direction(v,h,d), column, row   ex: d1z....(diagonal, column 1, row z)" << endl;
+        cin >> begin_row;
+        if(cin.peek() == '\n') cin.ignore();
+        return begin_row; 
+    }else{
+        display_message("Your move, please: ");
+	    getline(cin, answer);
+	    return answer;
+    }
+}
 
 game* Boop::clone() const{
     return new Boop(*this);
 }
 
 void Boop::compute_moves(std::queue<std::string>& moves) const{
-    //needs to find all legal moves computer can make and push into queue
+    string game = "OVER";
+    if(is_game_over()){//checks for 3 cats in a row
+        moves.push(game);
+        return;
+    }
+
     //make move string
     string move = "   ";
     //cycle through all combinations check if is legal and then push in queue
-    for(char r = '1'; r < '7'; r++){
-        for(char c = 'U'; c < '')
-            move[0] = 'k';
-            move[1] = r;
-            move[2] = c;
-    }
-    if(is_legal(move)){
-        moves.push(move);
+    //kitten moves
+    if(turn_type == 0){
+        for(char r = '1'; r < '7'; r++){
+            for(char c = 'U'; c < '['; c++){
+                move[0] = 'k';
+                move[1] = r;
+                move[2] = c;
+                if(is_legal(move)){
+                    moves.push(move);
+                }
+                else{
+                    continue;
+                }
+            }
+        }
+        //cat moves
+            for(char r = '1'; r < '7'; r++){
+            for(char c = 'U'; c < '['; c++){
+                move[0] = 'c';
+                move[1] = r;
+                move[2] = c;
+                if(is_legal(move)){
+                    moves.push(move);
+                }
+                else{
+                    continue;
+                }
+            }
+        }
+    }else if(turn_type == 3){
+        for(char r = '1'; r < '7'; r++){
+            for(char c = 'U'; c < '['; c++){
+                move[0] = 'd';
+                move[1] = r;
+                move[2] = c;
+                if(is_legal(move)){
+                    moves.push(move);
+                }
+                else{
+                    continue;
+                }
+            }
+        }
+        //cat moves
+            for(char r = '1'; r < '7'; r++){
+            for(char c = 'U'; c < '['; c++){
+                move[0] = 'h';
+                move[1] = r;
+                move[2] = c;
+                if(is_legal(move)){
+                    moves.push(move);
+                }
+                else{
+                    continue;
+                }
+            }
+        }
+        for(char r = '1'; r < '7'; r++){
+            for(char c = 'U'; c < '['; c++){
+                move[0] = 'v';
+                move[1] = r;
+                move[2] = c;
+                if(is_legal(move)){
+                    moves.push(move);
+                }
+                else{
+                    continue;
+                }
+            }
+        }
     }
 }
 
@@ -634,8 +858,11 @@ void Boop::display_status() const{
 
 int Boop::evaluate() const{
     int const KITTEN = 10;
-    int const CAT = 20;
-    int const NEAR = 5;
+    int const CAT = 30;
+    int const NEAR = 15;
+    int const KITTEN_BANK = 1;
+    int const CAT_BANK = 3;
+    int const CAT_TRIPLE = 15000;
     int human_count = 0;
     int computer_count = 0;
     for(int row = 0; row < 6; row++){
@@ -723,9 +950,112 @@ int Boop::evaluate() const{
             }
         }
     }
+    
+    //items in bank less than if on board
+    if(p1k >= 1){//incase it were 0
+        human_count = human_count + (p1k * KITTEN_BANK);
+    }
+    if(p2k >= 1){
+        computer_count = computer_count + (p2k * KITTEN_BANK);
+    }
+    if(p1c >= 1){
+        human_count = human_count + (p1c * CAT_BANK);
+    }
+    if(p2c >= 1){
+        computer_count = computer_count + (p2c * CAT_BANK);
+    }
 
-    //in the bank cats more than kitten, less than on board values
-    //three cats in a row is very good, 100000
+
+    //CATS IN A ROW ON BOARD
+    //checking each row individually to see if there are 3 cats in a row
+    for(int row = 0; row < 6; row++){
+        for(int column = 0; column < 6; column++){
+            int space_type = board[row][column].get_type();
+            if(space_type == 3 || space_type == 4){//there's a cat
+                //top middle 
+                if(row - 1 >= 0 && board[row - 1][column].get_type() == space_type){
+                    if(row - 2 >= 0 && board[row - 2][column].get_type() == space_type){
+                        if(space_type == 3){
+                            human_count = human_count + CAT_TRIPLE;
+                        }else{
+                            computer_count = computer_count + CAT_TRIPLE;
+                        }
+                    }
+                }
+                //top right corner
+                if(row - 1 >= 0 && column + 1 < 6 && board[row - 1][column + 1].get_type() == space_type){
+                    if(row - 2 >= 0 && column + 2 < 6 && board[row - 2][column + 2].get_type() == space_type){
+                         if(space_type == 3){
+                            human_count = human_count + CAT_TRIPLE;
+                        }else{
+                            computer_count = computer_count + CAT_TRIPLE;
+                        }
+                    }
+                }
+                //directly right
+                if(column + 1 < 6 && board[row][column + 1].get_type() == space_type){
+                    if(column + 2 < 6 && board[row][column + 2].get_type() == space_type){
+                        if(space_type == 3){
+                            human_count = human_count + CAT_TRIPLE;
+                        }else{
+                            computer_count = computer_count + CAT_TRIPLE;
+                        }
+                    }
+                }
+                //bottom right corner
+                if(row + 1 < 6 && column + 1 < 6 && board[row + 1][column + 1].get_type() == space_type){
+                    if(row + 2 < 6 && column + 2 < 6 && board[row + 2][column + 2].get_type() == space_type){
+                        if(space_type == 3){
+                            human_count = human_count + CAT_TRIPLE;
+                        }else{
+                            computer_count = computer_count + CAT_TRIPLE;
+                        }
+                    } 
+                }
+                //bottom middle
+                if(row + 1 < 6 && board[row + 1][column].get_type() == space_type){
+                    if(row + 2 < 6 && board[row + 2][column].get_type() == space_type){
+                        if(space_type == 3){
+                            human_count = human_count + CAT_TRIPLE;
+                        }else{
+                            computer_count = computer_count + CAT_TRIPLE;
+                        }
+                    }
+                }
+                //bottom left corner
+                if(row + 1 < 6 && column - 1 >= 0 && board[row + 1][column - 1].get_type() == space_type){
+                    if(row + 2 < 6 && column - 2 >= 0 && board[row + 2][column - 2].get_type() == space_type){
+                        if(space_type == 3){
+                            human_count = human_count + CAT_TRIPLE;
+                        }else{
+                            computer_count = computer_count + CAT_TRIPLE;
+                        }
+                    }
+                }
+                //directly left
+                if(column - 1 >= 0 && board[row][column - 1].get_type() == space_type){
+                    if(column - 2 >= 0 && board[row][column - 2].get_type() == space_type){
+                        if(space_type == 3){
+                            human_count = human_count + CAT_TRIPLE;
+                        }else{
+                            computer_count = computer_count + CAT_TRIPLE;
+                        }
+                    }
+                }
+                //top left corner
+                if(row - 1 >= 0 && column - 1 >= 0 && board[row - 1][column - 1].get_type() == space_type){
+                    if(row - 2 >= 0 && column - 2 >= 0 && board[row - 2][column - 2].get_type() == space_type){
+                        if(space_type == 3){
+                            human_count = human_count + CAT_TRIPLE;
+                        }else{
+                            computer_count = computer_count + CAT_TRIPLE;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     return computer_count - human_count;
 }
 
@@ -771,7 +1101,7 @@ Boop::who Boop::winning( ) const{
             if (board[row][column].get_type() == 3){
                 p1 = true;
             }
-            else{
+            else if(board[row][column].get_type() == 4){
                 p2 = true;
             }
         }
@@ -795,6 +1125,7 @@ bool Boop::is_game_over() const{
     if((p1c == 0 && p1k == 0)|| (p2c == 0 && p2k == 0)){//8 cats on the board
         return true;
     }
+
     //checking each row individually to see if there are 3 cats in a row
     for(int row = 0; row < 6; row++){
         for(int column = 0; column < 6; column++){
@@ -855,6 +1186,24 @@ bool Boop::is_game_over() const{
 }
 
 bool Boop::is_legal(const string& move) const{
+    if(move == "OVER"){
+
+        return true;
+    }
+    //KEY   0 = new_piece, 1 = removing one, 3 = removing 3
+    if(turn_type == 0){
+        return is_legal_1(move);
+    }
+    else if(turn_type == 3){
+        return is_legal_2(move);
+    }
+    else if(turn_type == 1){
+        return is_legal_3(move);
+    }
+}
+
+bool Boop::is_legal_1(const string& move) const{
+    
     //Is string length 3
     if (move.length() != 3) return false;
     //Interpreting Move
@@ -888,22 +1237,22 @@ bool Boop::is_legal(const string& move) const{
     }
 
     //Checking Players have enough pieces
-    if(next_mover() == HUMAN){//Player 1
+    if(next_mover() == HUMAN){
         if((animal == 'C' || animal == 'c') && p1c == 0){
-            cout << "Invailid option, you have no cats available" << endl;
+            //cout << "Invailid option, you have no cats available" << endl;
             return false;
         }
         if((animal == 'K' || animal == 'k' ) && p1k == 0){
-            cout << "Invalid option, you have no kittens available" << endl;
+            //cout << "Invalid option, you have no kittens available" << endl;
             return false;
         }
-    }else{//Player 2
+    }else{//Computer
         if((animal == 'C' || animal == 'c') && p2c == 0){
-            cout << "Invalid option, you have no cats available" << endl;
+            //cout << "Invalid option, you have no cats available" << endl;
             return false;
         }
         if((animal == 'K' || animal == 'k' ) && p2k == 0){
-            cout << "Invalid option, you have no kittens available" << endl;
+            //cout << "Invalid option, you have no kittens available" << endl;
             return false;
         }
     }
@@ -911,4 +1260,111 @@ bool Boop::is_legal(const string& move) const{
 
     //if no other conditions are met then move is legal
     return true;
+}
+
+bool Boop::is_legal_2(const string& move) const{
+    //verify that the 3 entered are legal
+    // move = "d0a"
+    //similair but need to chekc out d, v, h
+    //right following type and belong to mover
+
+    if (move.length() != 3) return false;
+
+    //Interpreting Move
+    char direction = toupper(move.at(0));
+    // column part
+    int column = move.at(1) - '1'; 
+    //row part
+    int row = toupper(move.at(2)) - 'U';
+
+    //Diagonal Row of Kittens
+    if(next_mover() == HUMAN && (direction == 'd' || direction == 'D')){//PLayer 1's turn
+        if(board[row - 2][column + 2].get_type() == 1 || board[row - 2][column + 2].get_type() == 3){//checking for right diagonal
+            if(board[row - 1][column + 1].get_type() == 1 || board[row - 1][column + 1].get_type() == 3){
+                return true;
+            }
+        }
+        else if(board[row - 2][column - 2].get_type() == 1 || board[row - 2][column - 2].get_type() == 3){//checking for left diagonal
+            if(board[row - 1][column - 1].get_type() == 1 || board[row - 1][column - 1].get_type() == 3){
+                return true;
+            }
+        }
+    }
+    else if (next_mover() == COMPUTER && (direction == 'd' || direction == 'D')){//Player 2's Turn
+         if(board[row - 2][column + 2].get_type() == 2 || board[row - 2][column + 2].get_type() == 4){//checking for right diagonal
+            if(board[row - 1][column + 1].get_type() == 2 || board[row - 1][column + 1].get_type() == 4){
+                return true;
+            }
+        }
+        else if(board[row - 2][column - 2].get_type() == 2 || board[row - 2][column - 2].get_type() == 4){//checking for left diagonal
+            if(board[row - 1][column - 1].get_type() == 2 || board[row - 1][column - 1].get_type() == 4){
+                return true;
+            }
+        }
+    }
+
+    //Horizontal Row of Kittens
+    if(next_mover() == HUMAN && (direction == 'h' || direction == 'H')){//Player 1's turn
+        if(board[row][column + 2].get_type() == 1 || board[row][column + 2].get_type() == 3){//checking for horizontal to the right
+            if(board[row][column + 1].get_type() == 1 || board[row][column + 1].get_type() == 3){
+               return true;
+            }
+        }
+    }
+    else if(next_mover() == COMPUTER && (direction == 'h' || direction == 'H')){//Player 2's Turn
+        if(board[row][column + 2].get_type() == 2 || board[row][column + 2].get_type() == 4){//checking for horizontal to the right
+            if(board[row][column + 1].get_type() == 2 || board[row][column + 1].get_type() == 4){
+               return true;
+            }
+        }
+    }
+
+    //Vertical Row of Kittens
+    if(next_mover() == HUMAN && (direction == 'v' || direction == 'V')){//Player 1's turn
+        if(board[row + 2][column].get_type() == 1 || board[row + 2][column].get_type() == 3){//checking downwards
+            if(board[row + 1][column].get_type() == 1 || board[row + 1][column].get_type() == 3){
+                return true;
+            }
+        }
+    }
+    else if(next_mover() == COMPUTER && (direction == 'v' || direction == 'V')){//Player 2's Turn
+        if(board[row + 2][column].get_type() == 2 || board[row + 2][column].get_type() == 4){//checking downwards
+            if(board[row + 1][column].get_type() == 2 || board[row + 1][column].get_type() == 4){
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+bool Boop::is_legal_3(const string& move) const{
+
+    if (move.length() != 3) return false;
+
+    //Interpreting Move
+    // column part
+    int column = move.at(1) - '1'; 
+    //row part
+    int row = toupper(move.at(2)) - 'U';
+
+    int type_num = board[row][column].get_type();
+
+    //verifying piece on board
+    if(type_num == 0){//verifying piece on board
+        return false;
+    }
+    
+    //verifying piece belongs to current player
+    if(next_mover() == HUMAN){
+        if(type_num == 1 || type_num == 3){
+            return true;
+        }
+    }else if(next_mover() == COMPUTER){
+        if(type_num == 2 || type_num == 4){
+            return true;
+        }
+    }
+
+    return false;
 }
